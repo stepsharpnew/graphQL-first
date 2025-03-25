@@ -1,5 +1,9 @@
 <template>
 	<div class="home-container">
+		<div class="navigation-buttons">
+			<router-link to="/login" class="nav-button">Войти</router-link>
+			<router-link to="/reg" class="nav-button">Регистрация</router-link>
+		</div>
 	  <h1 class="home-title">Список пользователей</h1>
 	  <!-- <div v-if="loading" class="loading">Загрузка...</div> -->
 	  <div class="user-cards">
@@ -15,47 +19,44 @@
 	</div>
   </template>
   
-  <script>
-  import { useQuery } from '@vue/apollo-composable';
-  import gql from 'graphql-tag';
-  
-  export default {
-	data(){
-		return {
-			users : [],
-			query : null
-		}
-	},
-	async mounted(){
-		await this.setup()
-	},
-	created () {
-		this.query = useQuery(gql`
-				query getUsers {
-					getUsers {
-						email
-						age
-					}
-				}
-			`);
-	},
-	methods : {
-		async setup() {
-			try {
-				const { result, refetch } = this.query;
-				await refetch();
-				if (result) {
-				this.users = result.getUsers;
-				console.log("Полученные пользователи:", this.users);
-				}
-			} catch (error) {
-				console.error("GraphQL error:", error);
-			}
-		},
-	}
+<script>
+import { useQuery } from '@vue/apollo-composable';
+import gql from 'graphql-tag';
+import { watch } from 'vue';
 
-  };
-  </script>
+export default {
+  data() {
+    return {
+      users: []
+    };
+  },
+  created() {
+    const { result, error } = useQuery(gql`
+      query getUsers {
+        getUsers {
+          email
+          age
+        }
+      }
+    `);
+
+    // Следим за изменением результата запроса
+    watch(result, (data) => {
+      if (data && data.getUsers) {
+        this.users = data.getUsers;
+        console.log('Полученные пользователи:', this.users);
+      }
+    });
+
+    // Обработка ошибок
+    watch(error, (err) => {
+      if (err) {
+        console.error('GraphQL error:', err);
+      }
+    });
+  }
+};
+</script>
   
   <style scoped>
   .home-container {	
@@ -109,4 +110,35 @@
   .user-info strong {
 	color: #333;
   }
+
+.navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.nav-button {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  text-decoration: none;
+  text-align: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.nav-button:hover {
+  background-color: #218838;
+}
+
+.nav-button:first-child {
+  background-color: #6c757d;
+}
+
+.nav-button:first-child:hover {
+  background-color: #5a6268;
+}
   </style>
