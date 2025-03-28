@@ -9,7 +9,7 @@
 	  <div class="user-cards">
 		<div v-for="user in users" :key="user.id" class="user-card">
 		  <div class="user-info">
-			<p><strong>ID:</strong> {{ user.id }}</p>
+			<p><strong>ID:</strong> {{ user._id }}</p>
 			<p><strong>Email:</strong> {{ user.email }}</p>
 			<p><strong>Возраст:</strong> {{ user.age }}</p>
 			<!-- <p><strong>Описание:</strong> {{ user.description }}</p> -->
@@ -20,41 +20,77 @@
   </template>
   
 <script>
-import { useQuery } from '@vue/apollo-composable';
 import gql from 'graphql-tag';
-import { watch } from 'vue';
-
 export default {
   data() {
     return {
-      users: []
+      users: [],
+      me: {},
     };
   },
-  created() {
-    const { result, error } = useQuery(gql`
-      query getUsers {
-        getUsers {
-          email
-          age
+  apollo: {
+    getUsers: {
+      query: gql`
+        query GetUsers {
+          getUsers {
+            _id
+            email
+            age
+            description
+          }
+        }
+      `,
+      result({ data }) {
+        if (data && data.getUsers) {
+          this.users = data.getUsers;
+          // console.log('Полученные пользователи:', this.users);
+        }
+      },
+      error(error) {
+        console.error('GraphQL error:', error);
+      }
+    },
+    getMe : {
+      query : gql`
+        query GetMe {
+          getMe {
+              _id
+              age
+              description
+              email
+          }
+      }
+    `,
+      result ({data}){
+        if (data && data.getMe) {
+          this.me = data.getMe;
+          // console.log('ME:', this.me);
         }
       }
-    `);
+    },
 
-    // Следим за изменением результата запроса
-    watch(result, (data) => {
-      if (data && data.getUsers) {
-        this.users = data.getUsers;
-        console.log('Полученные пользователи:', this.users);
-      }
-    });
-
-    // Обработка ошибок
-    watch(error, (err) => {
-      if (err) {
-        console.error('GraphQL error:', err);
-      }
-    });
-  }
+    $subscribe: {
+      newUserCreated: {
+        query: gql`
+          subscription {
+            newUserCreated {
+              id
+              email
+            }
+          }
+        `,
+        result({ data }) {
+          if (data && data.newUserCreated) {
+            console.log('Новый пользователь:', data.newUserCreated);
+            this.users.push(data.newUserCreated);
+          }
+        },
+        error(error) {
+          console.error('Ошибка подписки:', error);
+        },
+      },
+    },
+  },
 };
 </script>
   

@@ -1,7 +1,7 @@
 <template>
   <div class="registration-container">
     <h2 class="registration-title">Регистрация</h2>
-    <form @submit.prevent="register" class="registration-form">
+    <form @submit.prevent="registration" class="registration-form">
       <div class="form-group">
         <label for="email" class="form-label">Email:</label>
         <input type="text" id="email" v-model="email" required class="form-input">
@@ -28,7 +28,6 @@
   </div>
 </template>
 <script>
-import { useMutation } from '@vue/apollo-composable';
 import gql from 'graphql-tag';
 
 export default {
@@ -41,40 +40,34 @@ export default {
       mutation : null
     };
   },
-  created() {
-    // Определяем мутацию при создании компонента
-    this.mutation = useMutation(gql`
-      mutation Registration($dto: UserRegisterInput!) {
-        registration(dto: $dto) {
-          accessToken
-          age
-          email
-          id
-          refreshToken
-        }
-      }
-    `);
-  },
-  methods: {
-    async register() {
+  methods : {
+    async registration(){
       try {
-        const { mutate } = this.mutation;
-        const response = await mutate({
-          dto: {
-            email: this.email,
-            password: this.password,
-            age: parseInt(this.age) || null,
-            description: this.description,
-          },
-        });
-        localStorage.setItem('accessToken', response.data.registration.accessToken)
-        console.log(response.data);
+        const {data} = await this.$apollo.mutate({
+          mutation : gql`
+            mutation Registration ($email : String!, $password : String!, $age : Int, $description : String){
+              registration(dto: {email : $email, password : $password, age : $age, description : $description}) {
+                accessToken
+                email
+              }
+            }
+          `,
+          variables : {
+            email : this.email,
+            password : this.password,
+            age : parseInt(this.age),
+            description :this.description
+          }
+        })
+        console.log(data,'Success');
+        localStorage.setItem('accessToken', data.registration.accessToken);
         
       } catch (error) {
-        console.error('GraphQL error:', error);
+        console.log(error);
+        
       }
-    },
-  },
+    }
+  }
 };
 </script>
 

@@ -1,8 +1,11 @@
-import { ApolloClient, InMemoryCache, HttpLink, from, gql } from '@apollo/client/core';
+import { ApolloClient, InMemoryCache, HttpLink, split, from } from '@apollo/client/core';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import axios from 'axios';
 import { fromPromise } from '@apollo/client/core';
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
+import { createClient } from 'graphql-ws';
+import { getMainDefinition } from '@apollo/client/utilities';
 
 // Настраиваем HTTP-ссылку
 const httpLink = new HttpLink({
@@ -10,11 +13,30 @@ const httpLink = new HttpLink({
   credentials: 'include',
 });
 
-// Настраиваем аутентификацию для каждого запроса
+// const getAuthToken = () => `Bearer ${localStorage.getItem('accessToken') || ''}`;
+
+// Настраиваем WebSocket ссылку для подписок
+const wsLink = new GraphQLWsLink(
+  createClient({
+    url: 'ws://localhost:3000/graphql',
+    connectionParams: () => {
+      const token = localStorage.getItem('accessToken');
+      return token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
+    },
+    on: {
+      closed: (event) => console.error('WebSocket закрыт:', event),
+      error: (error) => console.error('Ошибка WebSocket:', error),
+    },
+  })
+);
+
+// Настраиваем аутентификацию для HTTP-запросов
 const authLink = setContext((_, { headers }) => ({
   headers: {
     ...headers,
-    Authorization: `Bearer ${localStorage.getItem('access') || ''}`,
+    Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
   },
 }));
 
@@ -36,7 +58,7 @@ const refreshToken = () =>
       const newAccessToken = response?.data?.data?.refresh?.accessToken;
       if (!newAccessToken) throw new Error('Не удалось обновить токен');
 
-      localStorage.setItem('access', newAccessToken);
+      localStorage.setItem('accessToken', newAccessToken);
       return newAccessToken;
     })
     .catch(error => {
@@ -68,9 +90,19 @@ const errorLink = onError(({ graphQLErrors, operation, forward }) => {
   }
 });
 
+// Разделяем HTTP и WebSocket запросы
+const link = split(
+  ({ query }) => {
+    const definition = getMainDefinition(query);
+    return definition.kind === 'OperationDefinition' && definition.operation === 'subscription';
+  },
+  wsLink,
+  from([errorLink, authLink.concat(httpLink)]) // HTTP-запросы через errorLink + authLink
+);
+
 // Создаём Apollo Client
 const client = new ApolloClient({
-  link: from([errorLink, authLink.concat(httpLink)]),
+  link,
   cache: new InMemoryCache(),
 });
 

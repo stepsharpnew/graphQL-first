@@ -10,7 +10,7 @@ const routes = [
   { path: '/reg', component: Register },
 ]
 
-export const router = createRouter({
+export default  createRouter({
   history: createWebHistory(),
   routes,
 })

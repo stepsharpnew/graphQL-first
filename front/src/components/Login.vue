@@ -1,7 +1,7 @@
 <template>
 	<div class="login-container">
 	  <h2 class="login-title">Вход</h2>
-	  <form @submit.prevent="login" class="login-form">
+	  <form @submit.prevent="loginUser" class="login-form">
 		<div class="form-group">
 		  <label for="email" class="form-label">Email:</label>
 		  <input type="text" id="email" v-model="email" required class="form-input">
@@ -21,7 +21,6 @@
   </template>
   
   <script>
-  import { useMutation } from '@vue/apollo-composable';
   import gql from 'graphql-tag';
   
   export default {
@@ -32,37 +31,31 @@
 		mutation: null,
 	  };
 	},
-	created() {
-	  this.mutation = useMutation(gql`
-		mutation Login($dto: UserLoginInput!) {
-		  login(dto: $dto) {
-			accessToken
-			age
-			email
-			id
-			refreshToken
-		  }
-		}
-	  `);
-	},
 	methods: {
-	  async login() {
-		try {
-		  const { mutate } = this.mutation;
-		  const response = await mutate({
-			dto: {
-			  email: this.email,
-			  password: this.password,
-			},
-		  });
-		  localStorage.setItem('accessToken', response.data.login.accessToken);
-		  console.log(response.data);
-		} catch (error) {
-		  console.error('GraphQL error:', error);
-		}
-	  },
-	},
-  };
+    async loginUser() {
+      try {
+        const { data } = await this.$apollo.mutate({
+          mutation: gql`
+            mutation Login($email: String!, $password: String!) {
+              login(dto: { email: $email, password: $password }) {
+                accessToken
+              }
+            }
+          `,
+          variables: {
+            email: this.email,
+            password: this.password,
+          },
+        });
+        this.loginResponse = data;
+        // console.log('Mutation result:', data.login);
+		localStorage.setItem('accessToken', data.login.accessToken);
+      } catch (error) {
+        console.error('Mutation error:', error);
+      }
+    },
+  },
+};
   </script>
   
   <style scoped>
