@@ -48,7 +48,7 @@
           },
         });
         this.loginResponse = data;
-        // console.log('Mutation result:', data.login);
+        console.log('Mutation result:', data.login);
 		localStorage.setItem('accessToken', data.login.accessToken);
       } catch (error) {
         console.error('Mutation error:', error);

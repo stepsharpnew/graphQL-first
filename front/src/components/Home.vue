@@ -82,7 +82,7 @@ export default {
         result({ data }) {
           if (data && data.newUserCreated) {
             console.log('Новый пользователь:', data.newUserCreated);
-            this.users.push(data.newUserCreated);
+            this.users = [...this.users, data.newUserCreated];
           }
         },
         error(error) {
